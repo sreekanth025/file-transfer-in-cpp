@@ -13,13 +13,13 @@ using namespace std;
 
 #define PORT 3000
 #define BACKLOG 5
-#define MAX_CLIENTS 100
+#define MAX_CLIENTS 10000
 #define MAX_LEN 4096
 #define PACKET_SIZE 4096
 
 void *ftp_server_instance(void *connection);
 void server_send_file(int conn_fd, string username, string filename);
-void server_receive_file(int conn_fd, string username, string filename);
+void server_receive_file(int conn_fd, string username, string filename, string mode);
 bool check_file_exists(string filepath);
 void send_user_files(int conn_fd, string username);
 void server_delete_file(int conn_fd, string username, string filename);
@@ -113,6 +113,9 @@ int main(int argc, char *argv[]) {
 
 void *ftp_server_instance(void *arguments) {
 
+    // default mode
+    string mode = "binary";
+
     thread_arguments t = *((thread_arguments *)arguments);
 
     char buffer[MAX_LEN];
@@ -162,11 +165,13 @@ void *ftp_server_instance(void *arguments) {
     send(conn_fd, login_message.c_str(), MAX_LEN, 0);
 
     // Send rule format
-    string rules = "rules       : upload <filename> ";
-    rules += "|| download <filename> ";
-    rules += "|| get_file_list ";
-    rules += "|| delete  <filename> ";
-    rules += "|| exit";
+    string rules = "rules       : \n\t\t upload   <filename>";
+    rules += "\n\t\t download <filename> ";
+    rules += "\n\t\t delete   <filename> ";
+    rules += "\n\t\t mode     <char/binary> ";
+    rules += "\n\t\t get_file_list ";
+    rules += "\n\t\t get_rule_format ";
+    rules += "\n\t\t exit";
 
     send(conn_fd, rules.c_str(), MAX_LEN, 0);
 
@@ -188,7 +193,7 @@ void *ftp_server_instance(void *arguments) {
         string op(operation), file_name(filename);
         
         if(op == "upload") {
-            server_receive_file(conn_fd, username, file_name);
+            server_receive_file(conn_fd, username, file_name, mode);
         }
         else if (op == "download") {
             server_send_file(conn_fd, username, file_name);
@@ -198,6 +203,27 @@ void *ftp_server_instance(void *arguments) {
         }
         else if (op == "delete") {
             server_delete_file(conn_fd, username, file_name);
+        }
+        else if (op == "mode") {
+
+            if(file_name == "char") {
+                mode = "char";
+                string msg = "Changed to char mode";
+                send(conn_fd, msg.c_str(), MAX_LEN, 0);
+            }
+            else if (file_name == "binary") {
+                mode = "binary";
+                string msg = "Changed to binary mode";
+                send(conn_fd, msg.c_str(), MAX_LEN, 0);
+            }
+            else {
+                string msg = "ERROR: Invalid format";
+                send(conn_fd, msg.c_str(), MAX_LEN, 0);
+            }
+
+        }
+        else if(op == "get_rule_format") {
+            send(conn_fd, rules.c_str(), MAX_LEN, 0);
         }
         else if(op == "exit") {
             break;
@@ -231,14 +257,26 @@ void server_send_file(int conn_fd, string username, string filename) {
     string file_path = directory + "/" + user_file;
 
     cout << "File path: " << file_path << "\n";
-    FILE *f;
-    if((f = fopen(file_path.c_str(), "rb")) == NULL) {
+    bool file_exists = check_file_exists(file_path);
+    if(!file_exists) {
         // Send operation failure message
         string msg = "ERROR: file not exists\n";
         send(conn_fd, msg.c_str(), MAX_LEN, 0);
         cout << msg << "\n";
         return;
     }
+
+
+    // // old method
+    // FILE *f;
+    // if((f = fopen(file_path.c_str(), "rb")) == NULL) {
+    //     // Send operation failure message
+    //     string msg = "ERROR: file not exists\n";
+    //     send(conn_fd, msg.c_str(), MAX_LEN, 0);
+    //     cout << msg << "\n";
+    //     return;
+    // }
+
 
     // Send operation acceptance status
     string m = "SUCCESS: file opened successfully";
@@ -285,7 +323,7 @@ void server_send_file(int conn_fd, string username, string filename) {
     return;
 }
 
-void server_receive_file(int conn_fd, string username, string filename) {
+void server_receive_file(int conn_fd, string username, string filename, string mode) {
     
     char buffer[MAX_LEN];
     char cwd[MAX_LEN];
@@ -368,7 +406,12 @@ void server_receive_file(int conn_fd, string username, string filename) {
 
     FILE *received_file;
 
-    if((received_file = fopen(filepath.c_str(), "w")) == NULL) {
+    string write_mode = "wb";
+    if(mode == "char") {
+        write_mode = "w";
+    }
+
+    if((received_file = fopen(filepath.c_str(), write_mode.c_str())) == NULL) {
         cout << "some error occured during file creation\n";
     }
 

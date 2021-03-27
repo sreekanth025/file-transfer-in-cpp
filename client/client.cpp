@@ -16,7 +16,7 @@ using namespace std;
 
 void *ftp_client_instance(void *connection);
 void client_send_file(int conn_fd, string username, string filename);
-void client_receive_file(int conn_fd, string username, string filename);
+void client_receive_file(int conn_fd, string username, string filename, string mode);
 bool check_file_exists(string filepath);
 void get_user_files(int conn_fd);
 void send_delete_file(int conn_fd, string filename);
@@ -61,6 +61,9 @@ int main() {
 }
 
 void *ftp_client_instance(void *connection) {
+
+    // default mode
+    string mode = "binary";
 
     int socket_fd = *((int *)connection);
     char buffer[MAX_LEN];
@@ -129,13 +132,34 @@ void *ftp_client_instance(void *connection) {
             client_send_file(socket_fd, username, file_name);
         } 
         else if(op == "download") {
-            client_receive_file(socket_fd, username, file_name);
+            client_receive_file(socket_fd, username, file_name, mode);
         } 
         else if (op == "get_file_list") {
             get_user_files(socket_fd);
         }
         else if (op == "delete") {
             send_delete_file(socket_fd, file_name);
+        }
+        else if (op == "mode") {
+
+            // Receive operation status
+            memset(buffer, 0, sizeof(buffer));
+            recv(socket_fd, buffer, sizeof(buffer), 0);
+            cout << buffer << "\n";
+
+            if(string(buffer) != "ERROR") {
+                if(file_name == "char")
+                    mode = "char";
+                else if(file_name == "binary")
+                    mode = "binary";
+            }
+
+        }
+        else if(op == "get_rule_foramt") {
+            // Receive rule format
+            memset(buffer, 0, sizeof(buffer));
+            recv(socket_fd, buffer, sizeof(buffer), 0);
+            cout << buffer << "\n";
         }
         else if(op == "exit") {
             cout << "Closing the connection..\n";
@@ -154,7 +178,7 @@ void *ftp_client_instance(void *connection) {
 }
 
 
-void client_receive_file(int conn_fd, string username, string filename) {
+void client_receive_file(int conn_fd, string username, string filename, string mode) {
     
     char buffer[MAX_LEN];
 
@@ -219,7 +243,12 @@ void client_receive_file(int conn_fd, string username, string filename) {
 
 
     FILE *received_file;
-    if((received_file = fopen(filepath.c_str(), "w")) == NULL) {
+    string write_mode = "wb";
+    if(mode == "char") {
+        write_mode = "w";
+    }
+
+    if((received_file = fopen(filepath.c_str(), write_mode.c_str())) == NULL) {
         cout << "some error occured during file creation\n";
     }
 
@@ -257,14 +286,25 @@ void client_send_file(int conn_fd, string username, string filename) {
     string file_path = directory + "/" + user_file;
 
     // cout << "File path: " << file_path << "\n";
-    FILE *f;
-    if((f = fopen(file_path.c_str(), "rb")) == NULL) {
+    
+    bool file_exists = check_file_exists(file_path);
+    if(!file_exists) {
         // Send operation failure message
         string msg = "ERROR: file not exists\n";
         send(conn_fd, msg.c_str(), MAX_LEN, 0);
         cout << msg << "\n";
         return;
     }
+
+    // // Old method
+    // FILE *f;
+    // if((f = fopen(file_path.c_str(), "rb")) == NULL) {
+    //     // Send operation failure message
+    //     string msg = "ERROR: file not exists\n";
+    //     send(conn_fd, msg.c_str(), MAX_LEN, 0);
+    //     cout << msg << "\n";
+    //     return;
+    // }
 
     // Send operation acceptance status
     string m = "SUCCESS: file opened successfully";
