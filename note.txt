@@ -1,0 +1,3 @@
+# give permission to run shell scripts
+chmod +x server.sh
+chmod +x client.sh

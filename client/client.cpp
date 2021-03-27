@@ -19,6 +19,8 @@ void client_send_file(int conn_fd, string username, string filename);
 void client_receive_file(int conn_fd, string username, string filename);
 bool check_file_exists(string filepath);
 void get_user_files(int conn_fd);
+void send_delete_file(int conn_fd, string filename);
+
 
 int main() {
 
@@ -131,6 +133,9 @@ void *ftp_client_instance(void *connection) {
         } 
         else if (op == "get_file_list") {
             get_user_files(socket_fd);
+        }
+        else if (op == "delete") {
+            send_delete_file(socket_fd, file_name);
         }
         else if(op == "exit") {
             cout << "Closing the connection..\n";
@@ -251,7 +256,7 @@ void client_send_file(int conn_fd, string username, string filename) {
     string user_file = "clients_storage/" + username + "/" + filename;
     string file_path = directory + "/" + user_file;
 
-    cout << "File path: " << file_path << "\n";
+    // cout << "File path: " << file_path << "\n";
     FILE *f;
     if((f = fopen(file_path.c_str(), "rb")) == NULL) {
         // Send operation failure message
@@ -341,4 +346,14 @@ void get_user_files(int conn_fd) {
     cout  << "Server      : " << buffer << "\n";
 
     return;
+}
+
+void send_delete_file(int conn_fd, string filename) {
+
+    char buffer[MAX_LEN];
+    memset(buffer, 0, sizeof(buffer));
+
+    // Receive delete status
+    recv(conn_fd, buffer, sizeof(buffer), 0);
+    cout << buffer << "\n";
 }

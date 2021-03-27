@@ -22,6 +22,7 @@ void server_send_file(int conn_fd, string username, string filename);
 void server_receive_file(int conn_fd, string username, string filename);
 bool check_file_exists(string filepath);
 void send_user_files(int conn_fd, string username);
+void server_delete_file(int conn_fd, string username, string filename);
 
 
 typedef struct thread_arguments {
@@ -123,7 +124,7 @@ void *ftp_server_instance(void *arguments) {
     // Receive username and password
     memset(buffer, 0, sizeof(buffer));
     recv(conn_fd, buffer, sizeof(buffer), 0);
-    cout << "\nReceived: " << buffer << "\n";
+    cout << "\nReceived: " << buffer << "";
 
     char user[MAX_LEN], pass[MAX_LEN];
 
@@ -146,7 +147,7 @@ void *ftp_server_instance(void *arguments) {
         return NULL;
     }
 
-    cout << "username: " << username << " || password: " << password << "\n";
+    // cout << "username: " << username << " || password: " << password << "\n";
 
     if(passwords[username] != password) {
         // authentication failure
@@ -164,6 +165,7 @@ void *ftp_server_instance(void *arguments) {
     string rules = "rules       : upload <filename> ";
     rules += "|| download <filename> ";
     rules += "|| get_file_list ";
+    rules += "|| delete  <filename> ";
     rules += "|| exit";
 
     send(conn_fd, rules.c_str(), MAX_LEN, 0);
@@ -173,7 +175,7 @@ void *ftp_server_instance(void *arguments) {
         // Receive operation and filename
         memset(buffer, 0, sizeof(buffer));
         recv(conn_fd, buffer, sizeof(buffer), 0);
-        cout << "\nReceived: " << buffer << "\n";
+        cout << "\nReceived: " << buffer << "";
 
         char operation[MAX_LEN], filename[MAX_LEN];
         if(sscanf(buffer,"%s %s", operation, filename) == -1) {
@@ -193,6 +195,9 @@ void *ftp_server_instance(void *arguments) {
         }
         else if (op == "get_file_list") {
             send_user_files(conn_fd, username);
+        }
+        else if (op == "delete") {
+            server_delete_file(conn_fd, username, file_name);
         }
         else if(op == "exit") {
             break;
@@ -439,4 +444,47 @@ void send_user_files(int conn_fd, string username) {
 
     send(conn_fd, file_list.c_str(), MAX_LEN, 0);
     return;
+}
+
+
+void server_delete_file(int conn_fd, string username, string filename) {
+    
+    char buffer[MAX_LEN];
+    char cwd[MAX_LEN];
+
+    if(getcwd(cwd, sizeof(cwd)) == NULL) {
+        // Send operation failure message
+        string msg = "ERROR: Some error occurred during getcwd()\n";
+        cout << msg << "\n";
+        return;
+    }
+
+    string directory(cwd);
+    string user_file = "clients_storage/" + username + "/" + filename;
+    string filepath = directory + "/" + user_file;
+
+    bool file_exists = check_file_exists(filepath);
+
+    if(!file_exists) {
+        // Send failure status
+        string msg = "ERROR: file not exists";
+        send(conn_fd, msg.c_str(), MAX_LEN, 0);
+        cout << msg << "\n";
+        return;
+    }
+
+    if(remove(filepath.c_str()) == 0) {
+        // Send success status
+        string msg = "file " + filename + " deleted";
+        send(conn_fd, msg.c_str(), MAX_LEN, 0);
+        cout << msg << "\n";
+        return;
+    } else {
+        // Send failure status
+        string msg = "ERROR: file not deleted";
+        send(conn_fd, msg.c_str(), MAX_LEN, 0);
+        cout << msg << "\n";
+        return;
+    }
+
 }
