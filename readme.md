@@ -16,19 +16,20 @@ and execute the following command to start the server.
 
 
 To start a client open a new terminal 
-and execute the following commands
+and execute the following command
 
 ```bash
 ./client.sh
 ```
 
-    - we can connect to any number of clients
+    - we can connect to any number of clients as we want.
+
     - Commands format will be displayed to the client once
       the connection is established and user logged in.
  
 ## Valid usernames and passwords:
-user_1 pass_1
-user_2 pass_2
+    * user_1 pass_1
+    * user_2 pass_2
 
     - We can add more users by adding username and passwords in 
       the "server/authentication.h" file and create folders 
@@ -48,12 +49,12 @@ user_2 pass_2
 ```
 
 
-If a file is already present in the target location (Receiving side)
-with the same file name, then it will prompt the client for replacing 
-the existing file. User can enter an "yes" or "no".
+    - If a file is already present in the target location (Receiving side)
+      with the same file name, then it will prompt the client for replacing 
+      the existing file. User can enter an "yes" or "no".
 
-The percentage of completion (for both uploading and downloading)
-is displayed on the client side.
+    - The percentage of completion (for both uploading and downloading)
+      is displayed on the client side.
 
 Code also handles the following:
 ```
