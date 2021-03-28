@@ -31,7 +31,7 @@ typedef struct thread_arguments {
     int client_no;
 } thread_arguments;
 
-
+map<string, string> passwords;
 pthread_t clients[MAX_CLIENTS];
 int counter = 0;
 
@@ -114,15 +114,24 @@ int32_t main(int32_t argc, char *argv[]) {
 
 void *ftp_server_instance(void *arguments) {
 
+    thread_arguments t = *((thread_arguments *)arguments);
+
     // default mode
     string mode = "binary";
 
-    thread_arguments t = *((thread_arguments *)arguments);
+    // get passwords
+    passwords = get_passwords();
+
+    cout << "\nCurrent users:";
+    for(auto x: passwords) {
+        cout << x.first << " " << x.second << "\n";
+    }
 
     char buffer[MAX_LEN];
     int conn_fd = t.connection;
 
-    string hello = "Provide <username> <space> <password>";
+    string hello = "Provide <username> <password>";
+    hello += "\n\t\t (or) new_user <username> <password>";
     send(conn_fd, hello.c_str(), MAX_LEN, 0);
 
     // Receive username and password
@@ -131,6 +140,31 @@ void *ftp_server_instance(void *arguments) {
     cout << "\nReceived: " << buffer << "";
 
     char user[MAX_LEN], pass[MAX_LEN];
+    char tmp[MAX_LEN];
+
+    if(strncmp("new_user", buffer, 8) == 0) {
+        
+        if(sscanf(buffer, "%s %s %s", tmp, user, pass) != -1) {
+
+            if(add_user(string(user), string(pass)) == -1) {
+                string msg = "ERROR: cannot create user";
+                send(conn_fd, msg.c_str(), MAX_LEN, 0);
+                cout << msg << "\n";
+                return NULL;
+            } else {
+                string msg = "user created, you can login now";
+                send(conn_fd, msg.c_str(), MAX_LEN, 0);
+                cout << msg << "\n";
+                return NULL;
+            }
+        } 
+        else {
+            string msg = "ERROR: invalid format";
+            send(conn_fd, msg.c_str(), MAX_LEN, 0);
+            printf("Error-user-creation: closing a client (id = %lld) instance\n", t.client_no);
+            return NULL;
+        }
+    }
 
     if(sscanf(buffer, "%s %s", user, pass) == -1) {
         // authentication failure
@@ -142,7 +176,7 @@ void *ftp_server_instance(void *arguments) {
 
     string username(user);
     string password(pass);
-
+    
     if(username == "" || password == "") {
         // authentication failure
         string msg = "ERROR: invalid format";

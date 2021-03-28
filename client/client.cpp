@@ -21,7 +21,7 @@ void client_receive_file(int conn_fd, string username, string filename, string m
 bool check_file_exists(string filepath);
 void get_user_files(int conn_fd);
 void send_delete_file(int conn_fd, string filename);
-
+void create_user_folder(string uname);
 
 int32_t main() {
 
@@ -84,7 +84,25 @@ void *ftp_client_instance(void *connection) {
     // strncpy(buffer, "user_1 pass_1", 13);
     send(socket_fd, buffer, sizeof(buffer), 0);
 
-    char uname[MAX_LEN], pass[MAX_LEN];
+
+    char uname[MAX_LEN], pass[MAX_LEN], tmp[MAX_LEN];
+
+    if(strncmp("new_user", buffer, 8) == 0) {
+
+        sscanf(buffer, "%s %s %s", tmp, uname, pass);
+
+        memset(buffer, 0, sizeof(buffer));
+        recv(socket_fd, buffer, sizeof(buffer), 0);
+        printf("Server      : %s\n", buffer);
+
+        if(strncmp("ERROR", buffer, 5) != 0) {
+            create_user_folder(uname);
+        }
+        return NULL;
+    }
+   
+
+
     sscanf(buffer, "%s %s", uname, pass);
     string username(uname), password(pass);
     // cout << "username: " << username << " || password: " << password << "\n";
@@ -435,4 +453,25 @@ void send_delete_file(int conn_fd, string filename) {
     // Receive delete status
     recv(conn_fd, buffer, sizeof(buffer), 0);
     cout << buffer << "\n";
+}
+
+void create_user_folder(string uname) {
+
+    char cwd[MAX_LEN];
+    if(getcwd(cwd, sizeof(cwd)) == NULL) {
+        string msg = "ERROR: Some error occurred during getcwd()\n";
+        cout << msg << "\n";
+        return;
+    }
+
+    string p_directory(cwd);
+
+    string dirname = p_directory + "/clients_storage/" + uname + "/";
+    if(mkdir(dirname.c_str(), 0777)==0) {
+        cout << "Directory created\n";
+    } else {
+        cout << "Some error occured, folder not created\n";
+        return ;
+    }
+
 }
