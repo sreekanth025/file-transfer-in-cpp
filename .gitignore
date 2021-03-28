@@ -1,5 +1,5 @@
 /.vscode
 /client/client
 /server/server
-/server/clients_storage/user_1/movie.mkv
-/client/clients_storage/user_1/movie.mkv
+/server/clients_storage/*
+/client/clients_storage/*
