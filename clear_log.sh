@@ -1,0 +1,1 @@
+rm -f server/server.log

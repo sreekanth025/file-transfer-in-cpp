@@ -3,6 +3,7 @@
 ```bash
 chmod +x server.sh
 chmod +x client.sh
+chmod +x clear_log.sh
 ```
 
 # Usage
@@ -10,7 +11,7 @@ chmod +x client.sh
 Open a terminal in the current working directory 
 and execute the following command to start the server.
 
-```bash
+```
 ./server.sh
 ```
 
@@ -18,7 +19,7 @@ and execute the following command to start the server.
 To start a client open a new terminal 
 and execute the following command
 
-```bash
+```
 ./client.sh
 ```
 
@@ -31,9 +32,10 @@ and execute the following command
     * user_1 pass_1
     * user_2 pass_2
 
-    - We can add more users by adding username and passwords in 
-      the "server/authentication.h" file and create folders 
-      in the server and client for the respective user.
+    - On launching a new client instance, we can add a new user
+      by the command 'new_user <username> <password>'
+      If the username is available, a new account will be created.
+      Account details are stored in encrypted format in a file (auth.txt).
 
 
 ## Commands / Rules format:
@@ -54,7 +56,7 @@ and execute the following command
       the existing file. User can enter an "yes" or "no".
 
     - The percentage of completion (for both uploading and downloading)
-      is displayed on the client side.
+      is displayed on the both server and client along with a progress bar
 
 Code also handles the following:
 ```

@@ -24,6 +24,7 @@ void server_receive_file(int conn_fd, string username, string filename, string m
 bool check_file_exists(string filepath);
 void send_user_files(int conn_fd, string username);
 void server_delete_file(int conn_fd, string username, string filename);
+void print_log(string msg, string user);
 
 
 typedef struct thread_arguments {
@@ -31,9 +32,12 @@ typedef struct thread_arguments {
     int client_no;
 } thread_arguments;
 
+
+std::ofstream log_file("server.log", ios_base::app);
 map<string, string> passwords;
 pthread_t clients[MAX_CLIENTS];
 int counter = 0;
+
 
 int32_t main(int32_t argc, char *argv[]) {
 
@@ -45,9 +49,11 @@ int32_t main(int32_t argc, char *argv[]) {
     // create a socket for IPv4(PF_INET) and TCP-Protocol(SOCK_STREAM)
     if ((socket_fd = socket(PF_INET, SOCK_STREAM, 0)) < 0) {
         printf("Some error occurred during the creation of socket\n");
+        print_log("Some error occurred during the creation of socket", "System");
         exit(1);
     } else {
         printf("Socket created successfully\n");
+        print_log("Socket created successfully", "System");
     }
 
 
@@ -64,18 +70,22 @@ int32_t main(int32_t argc, char *argv[]) {
     // Bind the socket with IP address and port
     if (bind(socket_fd, (struct sockaddr*) &server_address, sizeof(server_address)) < 0) {
         printf("Some error occurred during binding\n");
+        print_log("Some error occurred during binding", "System");
         exit(1);
     } else {
         printf("Socket binded with network\n");
+        print_log("Socket binded with network", "System");
     }
 
 
     // listen for incoming connction requests
     if (listen(socket_fd, BACKLOG) != 0) {
         printf("Failed to listen\n");
+        print_log("Failed to listen", "System");
         exit(1);
     } else {
         printf("Server started listening\n");
+        print_log("Server started listening", "System");
     }
 
     
@@ -84,15 +94,18 @@ int32_t main(int32_t argc, char *argv[]) {
 
         if(counter >= MAX_CLIENTS) {
             printf("Cannot handle clients anymore!\n");
+            print_log("Cannot handle clients anymore!", "System");
             break;
         }
 
         conn_fd = accept(socket_fd, (struct sockaddr*) &client_address, (socklen_t *) &len);
         if(conn_fd < 0) {
             printf("Failed to accept the conection request\n");
+            print_log("Failed to accept the conection request", "System");
             exit(1);
         } else {
             printf("Accepted the client connection request\n");
+            print_log("Accepted the client (id = " + to_string(counter) + ") connection request","System");
 
             thread_arguments t;
             t.client_no = counter;
@@ -122,7 +135,7 @@ void *ftp_server_instance(void *arguments) {
     // get passwords
     passwords = get_passwords();
 
-    cout << "\nCurrent users:";
+    cout << "\nCurrent users:\n";
     for(auto x: passwords) {
         cout << x.first << " " << x.second << "\n";
     }
@@ -138,6 +151,7 @@ void *ftp_server_instance(void *arguments) {
     memset(buffer, 0, sizeof(buffer));
     recv(conn_fd, buffer, sizeof(buffer), 0);
     cout << "\nReceived: " << buffer << "";
+    print_log("Received: " + string(buffer), "System");
 
     char user[MAX_LEN], pass[MAX_LEN];
     char tmp[MAX_LEN];
@@ -146,13 +160,23 @@ void *ftp_server_instance(void *arguments) {
         
         if(sscanf(buffer, "%s %s %s", tmp, user, pass) != -1) {
 
+            if(passwords.find(user) != passwords.end()) {
+                string msg = "ERROR: user already exists";
+                print_log(msg, "System");
+                send(conn_fd, msg.c_str(), MAX_LEN, 0);
+                cout << msg << "\n";
+                return NULL;
+            }
+
             if(add_user(string(user), string(pass)) == -1) {
                 string msg = "ERROR: cannot create user";
+                print_log(msg, "System");
                 send(conn_fd, msg.c_str(), MAX_LEN, 0);
                 cout << msg << "\n";
                 return NULL;
             } else {
                 string msg = "user created, you can login now";
+                print_log(msg, "System");
                 send(conn_fd, msg.c_str(), MAX_LEN, 0);
                 cout << msg << "\n";
                 return NULL;
@@ -190,6 +214,7 @@ void *ftp_server_instance(void *arguments) {
     if(passwords[username] != password) {
         // authentication failure
         string msg = "ERROR: invalid username or password";
+        print_log(msg, "System");
         send(conn_fd, msg.c_str(), MAX_LEN, 0);
         printf("Error-2: closing a client (id = %lld) instance\n", t.client_no);
         return NULL;
@@ -197,6 +222,7 @@ void *ftp_server_instance(void *arguments) {
 
     // authentication success
     string login_message = "SUCCESS: login success\n";
+    print_log(login_message, "System");
     send(conn_fd, login_message.c_str(), MAX_LEN, 0);
 
     // Send rule format
@@ -216,6 +242,7 @@ void *ftp_server_instance(void *arguments) {
         memset(buffer, 0, sizeof(buffer));
         recv(conn_fd, buffer, sizeof(buffer), 0);
         cout << "\nReceived: " << buffer << "";
+        print_log("Received: " + string(buffer), username);
 
         char operation[MAX_LEN], filename[MAX_LEN];
         if(sscanf(buffer,"%s %s", operation, filename) == -1) {
@@ -271,6 +298,7 @@ void *ftp_server_instance(void *arguments) {
     }
 
     printf("closing a client instance (id = %lld)\n", t.client_no);
+    print_log("closing a client instance (id = " + to_string(t.client_no) + ")", "System");
     return NULL;
 }
 
@@ -282,6 +310,7 @@ void server_send_file(int conn_fd, string username, string filename) {
 
     if(getcwd(cwd, sizeof(cwd)) == NULL) {
         string msg = "ERROR: Some error occurred during getcwd()\n";
+        print_log(msg, username);
         send(conn_fd, msg.c_str(), MAX_LEN, 0);
         cout << msg << "\n";
         return;
@@ -296,6 +325,7 @@ void server_send_file(int conn_fd, string username, string filename) {
     if(!file_exists) {
         // Send operation failure message
         string msg = "ERROR: file not exists\n";
+        print_log(msg, username);
         send(conn_fd, msg.c_str(), MAX_LEN, 0);
         cout << msg << "\n";
         return;
@@ -315,11 +345,13 @@ void server_send_file(int conn_fd, string username, string filename) {
 
     // Send operation acceptance status
     string m = "SUCCESS: file opened successfully";
+    print_log(m, username);
     send(conn_fd, m.c_str(), MAX_LEN, 0);
 
     struct stat file_stat;
     if(stat(file_path.c_str(), &file_stat) == -1) {
         cout << "ERROR: some error occurred during extracting file stats\n";
+        print_log("ERROR: some error occurred during extracting file stats", username);
         return;
     }
 
@@ -336,6 +368,7 @@ void server_send_file(int conn_fd, string username, string filename) {
     memset(buffer, 0, sizeof(buffer));
     recv(conn_fd, buffer, sizeof(buffer), 0);
     cout  << "Client   : " << buffer << "\n";
+    print_log("Received: " + string(buffer), username);
 
     if(strncmp(buffer, "ERROR", 5)==0) {
         cout << "Aborting operation..\n";
@@ -377,6 +410,8 @@ void server_send_file(int conn_fd, string username, string filename) {
     std::cout << std::endl;
 
     cout << "File sent successfully\n";
+    print_log("File sent successfully", username);
+    
     return;
 }
 
@@ -400,6 +435,7 @@ void server_receive_file(int conn_fd, string username, string filename, string m
     if(getcwd(cwd, sizeof(cwd)) == NULL) {
         // Send operation failure message
         string msg = "ERROR: Some error occurred during getcwd()\n";
+        print_log(msg, username);
         cout << msg << "\n";
         return;
     }
@@ -470,6 +506,7 @@ void server_receive_file(int conn_fd, string username, string filename, string m
 
     if((received_file = fopen(filepath.c_str(), write_mode.c_str())) == NULL) {
         cout << "some error occured during file creation\n";
+        print_log("some error occured during file creation", username);
     }
 
     int remain_data = file_size;
@@ -507,6 +544,7 @@ void server_receive_file(int conn_fd, string username, string filename, string m
     // cout << "\n";
     fclose(received_file);
     cout << "File Received successfully\n";
+    print_log("File Received successfully", username);
     return;
 }
 
@@ -525,6 +563,7 @@ void send_user_files(int conn_fd, string username) {
     if(getcwd(cwd, sizeof(cwd)) == NULL) {
         // Send operation failure message
         string msg = "ERROR: Some error occurred during getcwd()\n";
+        print_log(msg, username);
         send(conn_fd, msg.c_str(), MAX_LEN, 0);
         cout << msg << "\n";
         return;
@@ -540,7 +579,8 @@ void send_user_files(int conn_fd, string username) {
 
     if((d = opendir(user_directory.c_str())) == NULL) {
         // Send operation failure message
-        string msg = "ERROR: cannot access the files\n";
+        string msg = "ERROR: cannot access the files";
+        print_log(msg, username);
         send(conn_fd, msg.c_str(), MAX_LEN, 0);
         cout << msg << "\n";
         return;
@@ -576,7 +616,8 @@ void server_delete_file(int conn_fd, string username, string filename) {
 
     if(getcwd(cwd, sizeof(cwd)) == NULL) {
         // Send operation failure message
-        string msg = "ERROR: Some error occurred during getcwd()\n";
+        string msg = "ERROR: Some error occurred during getcwd()";
+        print_log(msg, username);
         cout << msg << "\n";
         return;
     }
@@ -598,15 +639,29 @@ void server_delete_file(int conn_fd, string username, string filename) {
     if(remove(filepath.c_str()) == 0) {
         // Send success status
         string msg = "file " + filename + " deleted";
+        print_log(msg, username);
         send(conn_fd, msg.c_str(), MAX_LEN, 0);
         cout << msg << "\n";
         return;
     } else {
         // Send failure status
         string msg = "ERROR: file not deleted";
+        print_log(msg, username);
         send(conn_fd, msg.c_str(), MAX_LEN, 0);
         cout << msg << "\n";
         return;
     }
 
+}
+
+void print_log(string msg, string user) {
+    time_t my_time = time(NULL);
+    string time_stamp(ctime(&my_time));
+
+    // removing \n from time stamp
+    time_stamp.erase(remove(time_stamp.begin(), time_stamp.end(), '\n'), time_stamp.end());
+
+    log_file << time_stamp << " (" << user << "): " << msg << "\n";
+    log_file.flush();
+    return;
 }

@@ -1,0 +1,45 @@
+Sun Mar 28 23:01:15 2021 (System): Socket created successfully
+Sun Mar 28 23:01:15 2021 (System): Socket binded with network
+Sun Mar 28 23:01:15 2021 (System): Server started listening
+Sun Mar 28 23:01:17 2021 (System): Accepted the client (id = 0) connection request
+Sun Mar 28 23:01:23 2021 (System): Received: user_1 pass_1
+
+Sun Mar 28 23:01:23 2021 (System): SUCCESS: login success
+
+Sun Mar 28 23:01:43 2021 (user_1): Received: upload movie.txt
+
+Sun Mar 28 23:01:49 2021 (user_1): Received: upload movie.mkv
+
+Sun Mar 28 23:02:01 2021 (user_1): File Received successfully
+Sun Mar 28 23:02:12 2021 (user_1): Received: upload movie.mkv
+
+Sun Mar 28 23:02:16 2021 (user_1): Received: upload movie.mkv
+
+Sun Mar 28 23:02:33 2021 (user_1): File Received successfully
+Sun Mar 28 23:04:11 2021 (user_1): Received: download movie.pk
+
+Sun Mar 28 23:04:11 2021 (user_1): ERROR: file not exists
+
+Sun Mar 28 23:04:18 2021 (user_1): Received: download movie.mkv
+
+Sun Mar 28 23:04:18 2021 (user_1): SUCCESS: file opened successfully
+Sun Mar 28 23:04:18 2021 (user_1): Received: SUCCESS: proceed
+Sun Mar 28 23:04:29 2021 (user_1): File sent successfully
+Sun Mar 28 23:04:42 2021 (user_1): Received: download movie.mkv
+
+Sun Mar 28 23:04:42 2021 (user_1): SUCCESS: file opened successfully
+Sun Mar 28 23:04:44 2021 (user_1): Received: ERROR: stop
+Sun Mar 28 23:04:55 2021 (user_1): Received: download movie.mkv
+
+Sun Mar 28 23:04:55 2021 (user_1): SUCCESS: file opened successfully
+Sun Mar 28 23:04:57 2021 (user_1): Received: SUCCESS: proceed
+Sun Mar 28 23:05:08 2021 (user_1): File sent successfully
+Sun Mar 28 23:05:17 2021 (user_1): Received: get_file_list
+
+Sun Mar 28 23:05:21 2021 (user_1): Received: get_rule_foramt
+
+Sun Mar 28 23:05:43 2021 (user_1): Received: get_rule_format
+
+Sun Mar 28 23:06:13 2021 (user_1): Received: exit
+
+Sun Mar 28 23:06:13 2021 (System): closing a client instance (id = 0)
