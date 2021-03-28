@@ -13,6 +13,7 @@ using namespace std;
 #define PORT 3000
 #define MAX_LEN 4096
 #define PACKET_SIZE 4096
+#define int long long
 
 void *ftp_client_instance(void *connection);
 void client_send_file(int conn_fd, string username, string filename);
@@ -22,7 +23,7 @@ void get_user_files(int conn_fd);
 void send_delete_file(int conn_fd, string filename);
 
 
-int main() {
+int32_t main() {
 
     int socket_fd;
     struct sockaddr_in server_address, client_address;
@@ -197,7 +198,7 @@ void client_receive_file(int conn_fd, string username, string filename, string m
     // cout  << "Server      : " << buffer << "\n";
 
     int file_size;
-    sscanf(buffer, "%d", &file_size);
+    sscanf(buffer, "%lld", &file_size);
     cout << "File size   : " << file_size << " bytes\n";
 
 
@@ -255,14 +256,33 @@ void client_receive_file(int conn_fd, string username, string filename, string m
     int remain_data = file_size;
     int len, rec_bytes=0;
 
-    cout << "downloading : ";
+    float progress;
+    int barWidth = 70;
+
+    cout << "downloading : \n";
     while((remain_data > 0) && ((len = recv(conn_fd, buffer, PACKET_SIZE, 0)) > 0)) {
         fwrite(buffer, sizeof(char), len, received_file);
         rec_bytes += len;
         remain_data -= len;
-        cout << (100*rec_bytes/file_size) << "% ";
+        // cout << (100*rec_bytes/file_size) << "% ";
+
+        progress = ((float) rec_bytes)/file_size;
+
+        // Progress bar
+        std::cout << "[";
+        int pos = barWidth * progress;
+        for (int i = 0; i < barWidth; ++i) {
+            if (i < pos) std::cout << "=";
+            else if (i == pos) std::cout << ">";
+            else std::cout << " ";
+        }
+        std::cout << "] " << (int)(progress * 100.0) << " %\r";
+        std::cout.flush();
+
     }
-    cout << "\n";
+    std::cout << std::endl;
+
+    // cout << "\n";
     fclose(received_file);
     cout << "File downloaded successfully\n";
     return;
@@ -356,17 +376,36 @@ void client_send_file(int conn_fd, string username, string filename) {
     int sent_bytes, offset = 0;
     int remain_data = file_stat.st_size;
 
+    float progress;
+    int barWidth = 70;
+
     int finished_bytes = 0;
-    cout << "uploading: ";
+    cout << "uploading: \n";
 
     while (((sent_bytes = sendfile(conn_fd, fd, NULL, PACKET_SIZE)) > 0) && (remain_data > 0)) {
         remain_data -= sent_bytes;
         // cout << "remaining bytes: " << remain_data << "\n";
 
         finished_bytes += sent_bytes;
-        cout << ((100*finished_bytes)/atoi(file_size.c_str())) << "% ";
+        // cout << ((100*finished_bytes)/atoi(file_size.c_str())) << "% ";
+
+        progress = ((float) finished_bytes)/stoll(file_size);
+
+        // Progress bar
+        std::cout << "[";
+        int pos = barWidth * progress;
+        for (int i = 0; i < barWidth; ++i) {
+            if (i < pos) std::cout << "=";
+            else if (i == pos) std::cout << ">";
+            else std::cout << " ";
+        }
+        std::cout << "] " << (int)(progress * 100.0) << " %\r";
+        std::cout.flush();
+        
     }
-    cout << "\n";
+    std::cout << std::endl;
+    // cout << "\n";
+    cout << "File uploaded successfully\n";
 
     return;
 }

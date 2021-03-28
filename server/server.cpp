@@ -16,6 +16,7 @@ using namespace std;
 #define MAX_CLIENTS 10000
 #define MAX_LEN 4096
 #define PACKET_SIZE 4096
+#define int long long
 
 void *ftp_server_instance(void *connection);
 void server_send_file(int conn_fd, string username, string filename);
@@ -34,7 +35,7 @@ typedef struct thread_arguments {
 pthread_t clients[MAX_CLIENTS];
 int counter = 0;
 
-int main(int argc, char *argv[]) {
+int32_t main(int32_t argc, char *argv[]) {
 
     int socket_fd, conn_fd;
     struct sockaddr_in server_address, client_address;
@@ -135,7 +136,7 @@ void *ftp_server_instance(void *arguments) {
         // authentication failure
         string msg = "ERROR: invalid format";
         send(conn_fd, msg.c_str(), MAX_LEN, 0);
-        printf("Error-0: closing a client (id = %d) instance\n", t.client_no);
+        printf("Error-0: closing a client (id = %lld) instance\n", t.client_no);
         return NULL;
     }
 
@@ -146,7 +147,7 @@ void *ftp_server_instance(void *arguments) {
         // authentication failure
         string msg = "ERROR: invalid format";
         send(conn_fd, msg.c_str(), MAX_LEN, 0);
-        printf("Error-1: closing a client (id = %d) instance\n", t.client_no);
+        printf("Error-1: closing a client (id = %lld) instance\n", t.client_no);
         return NULL;
     }
 
@@ -156,7 +157,7 @@ void *ftp_server_instance(void *arguments) {
         // authentication failure
         string msg = "ERROR: invalid username or password";
         send(conn_fd, msg.c_str(), MAX_LEN, 0);
-        printf("Error-2: closing a client (id = %d) instance\n", t.client_no);
+        printf("Error-2: closing a client (id = %lld) instance\n", t.client_no);
         return NULL;
     }
 
@@ -235,7 +236,7 @@ void *ftp_server_instance(void *arguments) {
         }
     }
 
-    printf("closing a client instance (id = %d)\n", t.client_no);
+    printf("closing a client instance (id = %lld)\n", t.client_no);
     return NULL;
 }
 
@@ -315,11 +316,33 @@ void server_send_file(int conn_fd, string username, string filename) {
     int sent_bytes, offset = 0;
     int remain_data = file_stat.st_size;
 
+    float progress;
+    int barWidth = 70;
+
+    int finished_bytes = 0;
+    cout << "uploading: \n";
+
     while (((sent_bytes = sendfile(conn_fd, fd, NULL, PACKET_SIZE)) > 0) && (remain_data > 0)) {
         remain_data -= sent_bytes;
         // cout << "remaining bytes: " << remain_data << "\n";
-    }
 
+        finished_bytes += sent_bytes;
+        progress = ((float) finished_bytes)/stoll(file_size);
+
+        // Progress bar
+        std::cout << "[";
+        int pos = barWidth * progress;
+        for (int i = 0; i < barWidth; ++i) {
+            if (i < pos) std::cout << "=";
+            else if (i == pos) std::cout << ">";
+            else std::cout << " ";
+        }
+        std::cout << "] " << (int)(progress * 100.0) << " %\r";
+        std::cout.flush();
+    }
+    std::cout << std::endl;
+
+    cout << "File sent successfully\n";
     return;
 }
 
@@ -392,7 +415,7 @@ void server_receive_file(int conn_fd, string username, string filename, string m
     }
 
     int file_size;
-    sscanf(buffer, "%d", &file_size);
+    sscanf(buffer, "%lld", &file_size);
     cout << "File size   : " << file_size << " bytes\n";
 
 
@@ -418,16 +441,38 @@ void server_receive_file(int conn_fd, string username, string filename, string m
     int remain_data = file_size;
     int len, rec_bytes=0;
 
-    cout << "downloading : ";
+
+    float progress;
+    int barWidth = 70;
+
+
+
+    cout << "downloading : \n";
     while((remain_data > 0) && ((len = recv(conn_fd, buffer, PACKET_SIZE, 0)) > 0)) {
         fwrite(buffer, sizeof(char), len, received_file);
         rec_bytes += len;
         remain_data -= len;
-        cout << (100*rec_bytes/file_size) << "% ";
+        // cout << (100*rec_bytes/file_size) << "% ";
+
+        progress = ((float) rec_bytes)/file_size;
+
+        // Progress bar
+        std::cout << "[";
+        int pos = barWidth * progress;
+        for (int i = 0; i < barWidth; ++i) {
+            if (i < pos) std::cout << "=";
+            else if (i == pos) std::cout << ">";
+            else std::cout << " ";
+        }
+        std::cout << "] " << (int)(progress * 100.0) << " %\r";
+        std::cout.flush();
+        
     }
-    cout << "\n";
+    std::cout << std::endl;
+
+    // cout << "\n";
     fclose(received_file);
-    cout << "File downloaded successfully\n";
+    cout << "File Received successfully\n";
     return;
 }
 
